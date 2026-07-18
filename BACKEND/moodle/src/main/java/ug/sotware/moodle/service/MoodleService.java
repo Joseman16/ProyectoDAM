@@ -34,7 +34,7 @@ public class MoodleService {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("username", username);
         form.add("password", password);
-        form.add("ug/sotware/moodle/service", moodleProperties.serviceName());
+        form.add("service", moodleProperties.serviceName());   // ← corregido
 
         String body = moodleWebClient.post()
                 .uri(moodleProperties.tokenEndpoint())

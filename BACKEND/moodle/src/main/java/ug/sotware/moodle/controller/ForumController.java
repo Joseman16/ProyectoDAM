@@ -1,53 +1,53 @@
 package ug.sotware.moodle.controller;
 
-import ug.sotware.moodle.dto.ForumDiscussionDto;
-import ug.sotware.moodle.dto.ForumPostDto;
-import ug.sotware.moodle.dto.NewForumPostRequest;
-import ug.sotware.moodle.repository.ForoPostLogRepository;
+import ug.sotware.moodle.entity.*;
+import ug.sotware.moodle.repository.*;
 import ug.sotware.moodle.security.CurrentUser;
-import ug.sotware.moodle.service.MoodleService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/forums")
-@RequiredArgsConstructor
+@RestController @RequestMapping("/api/forums") @RequiredArgsConstructor
 public class ForumController {
-
-    private final MoodleService moodleService;
+    private final ForoDiscusionRepository discusionRepository;
+    private final ForoMensajeRepository mensajeRepository;
+    private final UsuarioRepository usuarioRepository;
     private final CurrentUser currentUser;
-    private final ForoPostLogRepository foroPostLogRepository;
 
-    /** 5.1.5 Listar discusiones de un foro (forumId = "instance" del módulo "forum") */
+    public record DiscussionDto(long id, long forumId, String name, String subject, String userFullname, long created) {}
+    public record PostDto(long id, String subject, String message, String userFullname, long created) {}
+    public record NewPostRequest(String subject, String message) {}
+
     @GetMapping("/{forumId}/discussions")
-    public List<ForumDiscussionDto> discussions(@PathVariable long forumId, HttpServletRequest request) {
-        CurrentUser.Session session = currentUser.from(request);
-        return moodleService.getForumDiscussions(session.moodleToken(), forumId);
+    public List<DiscussionDto> discussions(@PathVariable long forumId) {
+        return discusionRepository.findByActividadId(forumId).stream()
+                .map(d -> new DiscussionDto(d.getId(), forumId, d.getAsunto(), d.getAsunto(),
+                        nombreDe(d.getUsuarioId()), d.getCreadoEn().toEpochSecond(java.time.ZoneOffset.UTC)))
+                .toList();
     }
 
-    /** 5.1.5 Leer mensajes de una discusión */
     @GetMapping("/discussions/{discussionId}/posts")
-    public List<ForumPostDto> posts(@PathVariable long discussionId, HttpServletRequest request) {
-        CurrentUser.Session session = currentUser.from(request);
-        return moodleService.getDiscussionPosts(session.moodleToken(), discussionId);
+    public List<PostDto> posts(@PathVariable long discussionId) {
+        return mensajeRepository.findByDiscusionId(discussionId).stream()
+                .map(m -> new PostDto(m.getId(), "", m.getMensaje(), nombreDe(m.getUsuarioId()),
+                        m.getCreadoEn().toEpochSecond(java.time.ZoneOffset.UTC)))
+                .toList();
     }
 
-    /**
-     * 5.1.5 Publicar una participación (respuesta) en una discusión existente.
-     * Tras publicar en Moodle, se registra en la BD local vía SP (sp_foro_post_insertar).
-     */
     @PostMapping("/discussions/{discussionId}/posts")
-    public Map<String, String> newPost(@PathVariable long discussionId,
-                                        @Valid @RequestBody NewForumPostRequest body,
-                                        HttpServletRequest request) {
-        CurrentUser.Session session = currentUser.from(request);
-        moodleService.addDiscussionPost(session.moodleToken(), discussionId, body.subject(), body.message());
-        foroPostLogRepository.insertarViaSP(session.usuarioLocalId(), discussionId, body.subject(), body.message());
+    public Map<String, String> newPost(@PathVariable long discussionId, @RequestBody NewPostRequest body, HttpServletRequest request) {
+        var session = currentUser.from(request);
+        ForoMensajeEntity m = new ForoMensajeEntity();
+        m.setDiscusionId(discussionId);
+        m.setUsuarioId(session.usuarioId());
+        m.setMensaje(body.message());
+        mensajeRepository.save(m);
         return Map.of("status", "ok", "message", "Publicación creada");
+    }
+
+    private String nombreDe(Long usuarioId) {
+        return usuarioRepository.findById(usuarioId).map(UsuarioEntity::getNombreCompleto).orElse("N/D");
     }
 }

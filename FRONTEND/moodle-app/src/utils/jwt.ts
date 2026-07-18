@@ -1,8 +1,8 @@
 export interface JwtPayload {
   sub: string;
   email?: string;
-  moodleUserId?: number;
-  usuarioLocalId?: number;
+  usuarioId?: number;
+  rol?: "admin" | "teacher" | "student" | string;
   exp?: number;
 }
 

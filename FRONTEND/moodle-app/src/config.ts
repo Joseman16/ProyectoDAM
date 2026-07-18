@@ -5,4 +5,4 @@
  * - Dispositivo físico: usa la IP de tu PC en la red local
  * - iOS Simulator: "http://localhost:8080"
  */
-export const BACKEND_URL = "http://192.168.255.3:8080";
+export const BACKEND_URL = "http://192.168.255.2:8080";

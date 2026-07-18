@@ -1,11 +1,10 @@
 package ug.sotware.moodle.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import ug.sotware.moodle.entity.UsuarioEntity;
 import ug.sotware.moodle.repository.UsuarioRepository;
 import ug.sotware.moodle.service.JwtService;
-import ug.sotware.moodle.service.MoodleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -15,38 +14,35 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final MoodleService moodleService;
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public record LoginRequest(String username, String password) {}
+    public record RegisterRequest(String username, String email, String nombreCompleto, String password, String rol) {}
 
     @PostMapping("/login")
     public Map<String, String> login(@RequestBody LoginRequest req) {
-        // 1) Autenticar contra Moodle y obtener el wstoken del usuario
-        String moodleToken = moodleService.fetchUserToken(req.username(), req.password());
+        UsuarioEntity usuario = usuarioRepository.findByUsername(req.username())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        // 2) Obtener datos del usuario autenticado (id, email, nombre, rol)
-        JsonNode info = moodleService.siteInfo(moodleToken);
-        long moodleUserId = info.get("userid").asLong();
-        String email = info.path("useremail").asText("");
-        String nombreCompleto = info.path("fullname").asText(req.username());
-        // Moodle no da un "rol" simple aquí; puedes ajustarlo según tu lógica
-        String rol = "student";
+        if (!passwordEncoder.matches(req.password(), usuario.getPasswordHash())) {
+            throw new IllegalArgumentException("Contraseña incorrecta");
+        }
 
-        // 3) Sincronizar (upsert) el usuario local vía el SP
-        var filas = usuarioRepository.upsertViaSP(moodleUserId, req.username(), email, nombreCompleto, rol);
-        UsuarioEntity usuario = filas.get(0);
-
-        // 4) Generar el JWT propio del backend, embebiendo el wstoken de Moodle
-        String jwt = jwtService.generate(
-                req.username(),
-                email,
-                moodleUserId,
-                moodleToken,
-                usuario.getId()
-        );
-
+        String jwt = jwtService.generate(usuario.getUsername(), usuario.getEmail(), usuario.getId(), usuario.getRol());
         return Map.of("token", jwt);
+    }
+
+    @PostMapping("/register")
+    public Map<String, String> register(@RequestBody RegisterRequest req) {
+        UsuarioEntity u = new UsuarioEntity();
+        u.setUsername(req.username());
+        u.setEmail(req.email());
+        u.setNombreCompleto(req.nombreCompleto());
+        u.setPasswordHash(passwordEncoder.encode(req.password()));
+        u.setRol(req.rol() != null ? req.rol() : "student");
+        usuarioRepository.save(u);
+        return Map.of("status", "ok", "message", "Usuario creado");
     }
 }

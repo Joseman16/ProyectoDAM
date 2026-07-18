@@ -76,3 +76,66 @@ export const StatsService = {
       .get<UserStats | { mensaje: string }>("/api/usuarios/me/estadisticas")
       .then((r) => r.data),
 };
+
+export interface AppUser {
+  id: number;
+  username: string;
+  email: string;
+  nombreCompleto: string;
+  rol: string;
+}
+
+export interface AdminCourse {
+  id: number;
+  fullname: string;
+  shortname: string;
+  summary: string;
+  teacherName: string;
+  totalEstudiantes: number;
+}
+
+export const AdminService = {
+  listUsers: (rol: "student" | "teacher") =>
+    api.get<AppUser[]>(`/api/admin/users?rol=${rol}`).then((r) => r.data),
+  createUser: (payload: {
+    username: string;
+    email: string;
+    nombreCompleto: string;
+    password: string;
+    rol: "student" | "teacher";
+  }) => api.post<{ status: string; message: string }>("/api/admin/users", payload).then((r) => r.data),
+  listCourses: () => api.get<AdminCourse[]>("/api/admin/courses").then((r) => r.data),
+  createCourse: (payload: {
+    nombre: string;
+    shortname: string;
+    descripcion?: string;
+    docenteId: number;
+    estudianteIds: number[];
+  }) =>
+    api
+      .post<{ status: string; message: string; courseId: number; estudiantesInscritos: number }>(
+        "/api/admin/courses",
+        payload
+      )
+      .then((r) => r.data),
+};
+
+export const TeacherService = {
+  createActivity: (
+    courseId: number,
+    payload: { nombre: string; tipo: "tarea" | "foro"; descripcion?: string; dueDate?: number }
+  ) =>
+    api
+      .post<{ status: string; message: string; activityId: number; tipo: string }>(
+        `/api/teacher/courses/${courseId}/activities`,
+        payload
+      )
+      .then((r) => r.data),
+  createDiscussion: (forumId: number, payload: { subject: string; message?: string }) =>
+    api
+      .post<{ status: string; message: string; discussionId: number }>(
+        `/api/teacher/forums/${forumId}/discussions`,
+        payload
+      )
+      .then((r) => r.data),
+};

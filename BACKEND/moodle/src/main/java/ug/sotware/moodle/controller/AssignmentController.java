@@ -1,37 +1,29 @@
 package ug.sotware.moodle.controller;
 
-import ug.sotware.moodle.dto.AssignmentSubmissionRequest;
-import ug.sotware.moodle.repository.EntregaLogRepository;
+import ug.sotware.moodle.entity.EntregaEntity;
+import ug.sotware.moodle.repository.EntregaRepository;
 import ug.sotware.moodle.security.CurrentUser;
-import ug.sotware.moodle.service.MoodleService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/assignments")
-@RequiredArgsConstructor
+@RestController @RequestMapping("/api/assignments") @RequiredArgsConstructor
 public class AssignmentController {
-
-    private final MoodleService moodleService;
+    private final EntregaRepository entregaRepository;
     private final CurrentUser currentUser;
-    private final EntregaLogRepository entregaLogRepository;
 
-    /**
-     * 5.1.4 Envío de tareas (texto). assignId = "instance" del módulo "assign".
-     * Tras confirmar el envío en Moodle, se registra en la BD local vía SP
-     * (sp_entrega_insertar) para tener historial/auditoría propio.
-     */
+    public record SubmissionRequest(String onlineText) {}
+
     @PostMapping("/{assignId}/submit")
-    public Map<String, String> submit(@PathVariable long assignId,
-                                       @Valid @RequestBody AssignmentSubmissionRequest body,
-                                       HttpServletRequest request) {
-        CurrentUser.Session session = currentUser.from(request);
-        moodleService.submitAssignmentText(session.moodleToken(), assignId, body.onlineText());
-        entregaLogRepository.insertarViaSP(session.usuarioLocalId(), assignId, body.onlineText());
-        return Map.of("status", "ok", "message", "Entrega enviada correctamente");
+    public Map<String, String> submit(@PathVariable long assignId, @RequestBody SubmissionRequest body, HttpServletRequest request) {
+        var session = currentUser.from(request);
+        EntregaEntity e = new EntregaEntity();
+        e.setActividadId(assignId);
+        e.setUsuarioId(session.usuarioId());
+        e.setTextoEntrega(body.onlineText());
+        e.setEstado("enviado");
+        entregaRepository.save(e);
+        return Map.of("status", "ok", "message", "Entrega registrada");
     }
 }
