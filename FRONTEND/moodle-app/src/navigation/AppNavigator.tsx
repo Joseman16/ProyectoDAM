@@ -12,6 +12,10 @@ import AssignmentSubmitScreen from "../screens/AssignmentSubmitScreen";
 import ForumDiscussionsScreen from "../screens/ForumDiscussionsScreen";
 import ForumPostsScreen from "../screens/ForumPostsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import AdminCoursesScreen from "../screens/AdminCoursesScreen";
+import AdminCreateCourseScreen from "../screens/AdminCreateCourseScreen";
+import AdminUsersScreen from "../screens/AdminUsersScreen";
+import TeacherWorkspaceScreen from "../screens/TeacherWorkspaceScreen";
 
 export type MainTabParamList = {
   Courses: undefined;
@@ -25,6 +29,10 @@ export type RootStackParamList = {
   AssignmentSubmit: { assignId: number; activityName: string };
   ForumDiscussions: { forumId: number; forumName: string };
   ForumPosts: { discussionId: number; subject: string };
+  AdminCourses: undefined;
+  AdminCreateCourse: undefined;
+  AdminUsers: undefined;
+  TeacherWorkspace: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -98,6 +106,26 @@ export default function AppNavigator() {
               name="CourseDetail"
               component={CourseDetailScreen}
               options={{ title: "Actividades" }}
+            />
+            <Stack.Screen
+              name="AdminCourses"
+              component={AdminCoursesScreen}
+              options={{ title: "Gestión de cursos" }}
+            />
+            <Stack.Screen
+              name="AdminCreateCourse"
+              component={AdminCreateCourseScreen}
+              options={{ title: "Crear curso" }}
+            />
+            <Stack.Screen
+              name="AdminUsers"
+              component={AdminUsersScreen}
+              options={{ title: "Registrar usuarios" }}
+            />
+            <Stack.Screen
+              name="TeacherWorkspace"
+              component={TeacherWorkspaceScreen}
+              options={{ title: "Área docente" }}
             />
             <Stack.Screen
               name="AssignmentSubmit"

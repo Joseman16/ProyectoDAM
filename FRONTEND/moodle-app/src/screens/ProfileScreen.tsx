@@ -9,9 +9,14 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/AuthContext";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StatsService, UserStats } from "../services/moodleApi";
 import { Avatar, Card, LoadingScreen, PrimaryButton, colors, spacing, radius } from "../components/ui";
 import { getApiErrorMessage } from "../utils/errors";
+import { RootStackParamList } from "../navigation/AppNavigator";
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 function StatBox({ icon, value, label, color }: { icon: string; value: string | number; label: string; color: string }) {
   return (
@@ -24,6 +29,7 @@ function StatBox({ icon, value, label, color }: { icon: string; value: string | 
 }
 
 export default function ProfileScreen() {
+  const navigation = useNavigation<Nav>();
   const { user, logout } = useAuth();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [noData, setNoData] = useState<string | null>(null);
@@ -104,6 +110,19 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
+      {user?.rol === "admin" ? (
+        <View style={styles.actionGroup}>
+          <PrimaryButton label="Gestionar cursos" onPress={() => navigation.navigate("AdminCourses")} />
+          <PrimaryButton label="Registrar usuarios" onPress={() => navigation.navigate("AdminUsers")} variant="outline" />
+        </View>
+      ) : null}
+
+      {user?.rol === "teacher" ? (
+        <View style={styles.actionGroup}>
+          <PrimaryButton label="Crear tareas y foros" onPress={() => navigation.navigate("TeacherWorkspace")} />
+        </View>
+      ) : null}
+
       <View style={styles.logoutWrap}>
         <PrimaryButton label="Cerrar sesión" onPress={handleLogout} variant="outline" />
       </View>
@@ -153,5 +172,6 @@ const styles = StyleSheet.create({
   noDataIcon: { fontSize: 36, textAlign: "center", marginBottom: spacing.sm },
   noDataText: { fontSize: 16, fontWeight: "700", color: colors.text, textAlign: "center" },
   noDataHint: { fontSize: 13, color: colors.textSecondary, textAlign: "center", marginTop: spacing.sm, lineHeight: 20 },
+  actionGroup: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },
   logoutWrap: { padding: spacing.lg, marginTop: spacing.md },
 });
